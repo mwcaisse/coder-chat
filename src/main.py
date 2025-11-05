@@ -1,6 +1,6 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-MODEL_NAME = "Qwen/Qwen3-Coder-30B-A3B-Instruct"
+MODEL_NAME = "Qwen/Qwen2.5-Coder-1.5B"
 
 
 def main():
@@ -18,6 +18,7 @@ def main():
 
     model_inputs = tokenizer([text], return_tensors="pt").to(model.device)
 
+    print("CALLING MODEL GENERATE?")
     generated_ids = model.generate(**model_inputs, max_new_tokens=65536)
     output_ids = generated_ids[0][len(model_inputs.input_ids[0]) :].tolist()
 
