@@ -1,6 +1,8 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from threading import Thread
 
-MODEL_NAME = "Qwen/Qwen2.5-Coder-1.5B"
+from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
+
+MODEL_NAME = "Qwen/Qwen3-1.7B"
 
 
 def main():
@@ -9,22 +11,33 @@ def main():
         MODEL_NAME, dtype="auto", device_map="auto"
     )
 
-    prompt = "How can I hash a file in python?"
+    prompt = "How can I create an API endpoint in python with Quart?"
     messages = [{"role": "user", "content": prompt}]
 
     text = tokenizer.apply_chat_template(
-        messages, tokenize=False, add_generation_prompt=True
+        messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
     )
+
+    streamer = TextIteratorStreamer(
+        tokenizer, skip_prompt=True, skip_special_tokens=True
+    )
+
+    print(f"Using device {model.device}")
 
     model_inputs = tokenizer([text], return_tensors="pt").to(model.device)
 
-    print("CALLING MODEL GENERATE?")
-    generated_ids = model.generate(**model_inputs, max_new_tokens=65536)
-    output_ids = generated_ids[0][len(model_inputs.input_ids[0]) :].tolist()
+    generation_args = {"max_new_tokens": 32768, "streamer": streamer, **model_inputs}
 
-    content = tokenizer.decode(output_ids, skip_special_tokens=True)
+    thread = Thread(
+        target=model.generate,
+        kwargs=generation_args,
+    )
+    thread.start()
 
-    print(content)
+    for text_token in streamer:
+        print(text_token, end="")
+
+    thread.join()
 
 
 if __name__ == "__main__":
