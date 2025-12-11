@@ -12,11 +12,9 @@ def process_message(message: str) -> Generator[str, None, None]:
         MODEL_NAME, dtype="auto", device_map="auto"
     )
 
-    prompt = """You are assisting a software engineer in software engineering tasks.
-    PREVIOUS MESSAGES:
-    - I am using python
-    - I am using FastAPI
-    CURRENT QUERY:    
+    prompt = """
+    LANGUAGE: python
+    RELEVANT LIBRARIES: FastAPI  
     """.strip()
     prompt += message
 
