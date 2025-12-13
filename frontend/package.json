@@ -19,7 +19,6 @@
         "@fontsource/roboto": "^5.2.9",
         "@mui/icons-material": "^7.3.6",
         "@mui/material": "^7.3.6",
-        "@stylistic/eslint-plugin": "^5.6.1",
         "react": "^19.2.0",
         "react-dom": "^19.2.0"
     },
