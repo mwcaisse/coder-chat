@@ -1,17 +1,17 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "references": [
-    {
-      "path": "../main"
-    }
-  ],
-  "compilerOptions": {
-    "baseUrl": "./",
-    "paths": {
-      "@app/*": ["../main/*"],
-      "@test/*": ["./*"]
+    "extends": "../../tsconfig.base.json",
+    "references": [
+        {
+            "path": "../main"
+        }
+    ],
+    "compilerOptions": {
+        "baseUrl": "./",
+        "paths": {
+            "@app/*": ["../main/*"],
+            "@test/*": ["./*"]
+        },
+        "types": ["vitest/globals"]
     },
-    "types": ["vitest/globals"]
-  },
-  "include": ["."]
+    "include": ["."]
 }
