@@ -9,15 +9,53 @@ import {
 import SendIcon from "@mui/icons-material/Send";
 import { FormEvent, useState } from "react";
 
+type Message = {
+    content: string;
+    user: boolean;
+};
+
 export default function Chat() {
-    const [messages, setMessages] = useState<string[]>([]);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [currentMessage, setCurrentMessage] = useState("");
 
-    const obSubmit = (event: FormEvent<HTMLFormElement>) => {
-        setMessages((prev) => [...prev, currentMessage]);
-        setCurrentMessage("");
+    const [inProcessMessageResponse, setInProcessMessageResponse] = useState<
+        string[]
+    >([]);
 
+    const obSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        if (currentMessage.length === 0) return;
+        setMessages((prev) => [
+            ...prev,
+            { user: true, content: currentMessage },
+        ]);
+        sendMessage(currentMessage);
+        setCurrentMessage("");
+    };
+
+    const sendMessage = async (message: string) => {
+        const resp = await fetch("/api/chat/", {
+            method: "POST",
+            body: JSON.stringify({ message: message }),
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+        });
+
+        let responseMessage = "";
+        const stringReader = resp.body.pipeThrough(new TextDecoderStream());
+        for await (const chunk of stringReader) {
+            setInProcessMessageResponse((prev) => [...prev, chunk]);
+            responseMessage += chunk;
+        }
+
+        // once we've finished reading the whole body, remove it from the in progress message and make it a real message
+        setMessages((prev) => [
+            ...prev,
+            { user: false, content: responseMessage },
+        ]);
+        setInProcessMessageResponse([]);
     };
 
     return (
@@ -30,15 +68,45 @@ export default function Chat() {
                             sx={{
                                 display: "flex",
                                 flexDirection: "row",
-                                justifyContent:
-                                    index % 2 === 0 ? "flex-end" : "flex-start",
+                                justifyContent: message.user
+                                    ? "flex-end"
+                                    : "flex-start",
+                                maxWidth: "100%",
                             }}
                         >
-                            <Paper sx={{ p: 2, borderRadius: 5 }}>
-                                {message}
+                            <Paper
+                                sx={{
+                                    p: 2,
+                                    borderRadius: 5,
+                                    whiteSpace: "pre-wrap",
+                                }}
+                            >
+                                {message.content}
                             </Paper>
                         </Box>
                     ))}
+                    {inProcessMessageResponse.length > 0 && (
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: "row",
+                                justifyContent: "flex-start",
+                                maxWidth: "100%",
+                            }}
+                        >
+                            <Paper
+                                sx={{
+                                    p: 2,
+                                    borderRadius: 5,
+                                    whiteSpace: "pre-wrap",
+                                }}
+                            >
+                                {inProcessMessageResponse.map((buff, index) => (
+                                    <span key={index}>{buff}</span>
+                                ))}
+                            </Paper>
+                        </Box>
+                    )}
                 </Stack>
                 <form onSubmit={obSubmit}>
                     <Stack direction="row" spacing={1}>
