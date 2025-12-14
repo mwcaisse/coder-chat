@@ -62,17 +62,19 @@ def send_message_to_chat(chat_id: UUID, message: str):
         raise ValueError(f"No chat with id {chat_id} exists")
 
     chat = CHATS[chat_id]
+
     chat.messages.append(ChatMessage(
         from_user=True,
         content=message
     ))
 
-    results_stream = process_message(message)
+    previous_messages = [cm.content for cm in chat.messages[:-1]]
+    results_stream = process_message(message, previous_messages)
 
     return stream_message_results(chat_id, results_stream)
 
 
-def process_message(message: str) -> Generator[str, None, None]:
+def process_message(message: str, previous_messages: list[str]) -> Generator[str, None, None]:
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME, dtype="auto", device_map="auto"
@@ -81,7 +83,16 @@ def process_message(message: str) -> Generator[str, None, None]:
     prompt = """
     LANGUAGE: python      
     """.strip()
-    prompt += message
+
+    if previous_messages is not None and len(previous_messages) > 0:
+        previous_messages_prompt = """
+        PREVIOUS MESSAGES (SEPARATED BY ______)
+        """.strip()
+
+        previous_messages_prompt += "______".join(previous_messages) + "______"
+        prompt += previous_messages_prompt
+
+    prompt += "QUESTION:" + message
 
     messages = [{"role": "user", "content": prompt}]
 
