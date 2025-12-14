@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import dataclass
-from typing import Generator, NamedTuple
+from typing import Generator
 
 from threading import Thread
 from uuid import UUID
@@ -10,9 +10,11 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStream
 MODEL_NAME = "Qwen/Qwen3-1.7B"
 
 
-class ChatMessage(NamedTuple):
+@dataclass
+class ChatMessage:
     from_user: bool
     content: str
+    summary: str | None = None
 
 
 @dataclass
@@ -47,10 +49,12 @@ def stream_message_results(chat_id: UUID, results_stream):
         message += text_token
         yield text_token
 
-    CHATS[chat_id].messages.append(ChatMessage(
+    chat_message = ChatMessage(
         from_user=False,
         content=message
-    ))
+    )
+    CHATS[chat_id].messages.append(chat_message)
+    summarize_chat_message(chat_message)
 
 
 def send_message_to_chat(chat_id: UUID, message: str):
@@ -75,8 +79,7 @@ def process_message(message: str) -> Generator[str, None, None]:
     )
 
     prompt = """
-    LANGUAGE: python
-    RELEVANT LIBRARIES: FastAPI  
+    LANGUAGE: python      
     """.strip()
     prompt += message
 
@@ -90,8 +93,6 @@ def process_message(message: str) -> Generator[str, None, None]:
         tokenizer, skip_prompt=True, skip_special_tokens=True
     )
 
-    print(f"Using device {model.device}")
-
     model_inputs = tokenizer([text], return_tensors="pt").to(model.device)
 
     generation_args = {"max_new_tokens": 32768, "streamer": streamer, **model_inputs}
@@ -103,3 +104,46 @@ def process_message(message: str) -> Generator[str, None, None]:
     thread.start()
 
     return streamer
+
+
+def summarize_chat_message(message: ChatMessage):
+    def thread_fun():
+        message.summary = summarize_message(message.content)
+
+    thread = Thread(
+        target=thread_fun,
+        kwargs={}
+    )
+    thread.start()
+
+
+def summarize_message(message: str) -> str:
+    # TODO: Deduplicate this with process_message above, but leave here for now
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_NAME, dtype="auto", device_map="auto"
+    )
+
+    prompt = """
+        SUMMARIZE THE FOLLOWING MESSAGE:
+    """.strip()
+    prompt += message
+
+    messages = [{"role": "user", "content": prompt}]
+
+    text = tokenizer.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
+    )
+    model_inputs = tokenizer([text], return_tensors="pt").to(model.device)
+
+    generated_ids = model.generate(
+        **model_inputs,
+        max_new_tokens=32768
+    )
+    output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist()
+    content = tokenizer.decode(output_ids[0:], skip_special_tokens=True).strip("\n")
+
+    print("Summarized message")
+    print(content)
+
+    return content

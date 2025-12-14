@@ -10,6 +10,7 @@ class ChatRequestModel(BaseModel):
 class ChatMessage(BaseModel):
     from_user: bool
     content: str
+    summary: str | None = None
 
 
 class ChatResponseModel(BaseModel):
