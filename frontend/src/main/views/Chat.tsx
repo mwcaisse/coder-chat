@@ -7,7 +7,7 @@ import {
     Box,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type Message = {
     content: string;
@@ -15,12 +15,33 @@ type Message = {
 };
 
 export default function Chat() {
+    const [chatId, setChatId] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [currentMessage, setCurrentMessage] = useState("");
 
     const [inProcessMessageResponse, setInProcessMessageResponse] = useState<
         string[]
     >([]);
+
+    useEffect(() => {
+        if (chatId !== null) {
+            return;
+        }
+
+        // otherwise we shall fetch a (rug) chat id
+        const getChatId = async () => {
+            const resp = await fetch("/api/chat/", {
+                method: "POST",
+                headers: {
+                    Accept: "application/json",
+                },
+            });
+            const data = await resp.json();
+            setChatId(data.id);
+            console.log("Created a chat with id: ", data.id);
+        };
+        getChatId();
+    }, [chatId]);
 
     const obSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -34,7 +55,7 @@ export default function Chat() {
     };
 
     const sendMessage = async (message: string) => {
-        const resp = await fetch("/api/chat/", {
+        const resp = await fetch(`/api/chat/${chatId}/message`, {
             method: "POST",
             body: JSON.stringify({ message: message }),
             headers: {
