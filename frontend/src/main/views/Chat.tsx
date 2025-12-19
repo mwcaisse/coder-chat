@@ -8,11 +8,36 @@ import {
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import { FormEvent, useEffect, useState } from "react";
+import remarkGfm from "remark-gfm";
+import rehypeStarryNight from "rehype-starry-night";
+import { MarkdownHooks } from "react-markdown";
 
 type Message = {
     content: string;
     user: boolean;
 };
+
+type ChatMessageProps = {
+    content: string;
+};
+
+function ChatMessage({ content }: ChatMessageProps) {
+    return (
+        <Paper
+            sx={{
+                px: 2,
+                borderRadius: 5,
+            }}
+        >
+            <MarkdownHooks
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeStarryNight]}
+            >
+                {content}
+            </MarkdownHooks>
+        </Paper>
+    );
+}
 
 export default function Chat() {
     const [chatId, setChatId] = useState<string | null>(null);
@@ -95,15 +120,7 @@ export default function Chat() {
                                 maxWidth: "100%",
                             }}
                         >
-                            <Paper
-                                sx={{
-                                    p: 2,
-                                    borderRadius: 5,
-                                    whiteSpace: "pre-wrap",
-                                }}
-                            >
-                                {message.content}
-                            </Paper>
+                            <ChatMessage content={message.content} />
                         </Box>
                     ))}
                     {inProcessMessageResponse.length > 0 && (
@@ -115,17 +132,9 @@ export default function Chat() {
                                 maxWidth: "100%",
                             }}
                         >
-                            <Paper
-                                sx={{
-                                    p: 2,
-                                    borderRadius: 5,
-                                    whiteSpace: "pre-wrap",
-                                }}
-                            >
-                                {inProcessMessageResponse.map((buff, index) => (
-                                    <span key={index}>{buff}</span>
-                                ))}
-                            </Paper>
+                            <ChatMessage
+                                content={inProcessMessageResponse.join("")}
+                            />
                         </Box>
                     )}
                 </Stack>
