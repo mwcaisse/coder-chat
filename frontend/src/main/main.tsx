@@ -8,6 +8,9 @@ import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 
+// Even though webstorm doesn't like this, this works
+import "@wooorm/starry-night/style/dark";
+
 createRoot(document.getElementById("root")!).render(
     <StrictMode>
         <App />

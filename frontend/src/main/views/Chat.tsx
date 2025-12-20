@@ -5,6 +5,7 @@ import {
     TextField,
     Paper,
     Box,
+    CircularProgress,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import { FormEvent, useEffect, useState } from "react";
@@ -39,11 +40,25 @@ function ChatMessage({ content }: ChatMessageProps) {
     );
 }
 
+function ChatMessageLoading() {
+    return (
+        <Paper
+            sx={{
+                p: 2,
+                borderRadius: 5,
+            }}
+        >
+            <CircularProgress />
+        </Paper>
+    );
+}
+
 export default function Chat() {
     const [chatId, setChatId] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [currentMessage, setCurrentMessage] = useState("");
 
+    const [loadingMessageResponse, setLoadingMessageResponse] = useState(false);
     const [inProcessMessageResponse, setInProcessMessageResponse] = useState<
         string[]
     >([]);
@@ -80,6 +95,7 @@ export default function Chat() {
     };
 
     const sendMessage = async (message: string) => {
+        setLoadingMessageResponse(true);
         const resp = await fetch(`/api/chat/${chatId}/message`, {
             method: "POST",
             body: JSON.stringify({ message: message }),
@@ -102,6 +118,7 @@ export default function Chat() {
             { user: false, content: responseMessage },
         ]);
         setInProcessMessageResponse([]);
+        setLoadingMessageResponse(false);
     };
 
     return (
@@ -123,6 +140,19 @@ export default function Chat() {
                             <ChatMessage content={message.content} />
                         </Box>
                     ))}
+                    {loadingMessageResponse &&
+                        inProcessMessageResponse.length === 0 && (
+                            <Box
+                                sx={{
+                                    display: "flex",
+                                    flexDirection: "row",
+                                    justifyContent: "flex-start",
+                                    maxWidth: "100%",
+                                }}
+                            >
+                                <ChatMessageLoading />
+                            </Box>
+                        )}
                     {inProcessMessageResponse.length > 0 && (
                         <Box
                             sx={{
