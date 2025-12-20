@@ -18,3 +18,16 @@ dev = [
     "pre-commit>=4.3.0",
     "ruff>=0.14.3",
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu130", marker = "sys_platform == 'linux'" },
+]
+torchvision = [
+    { index = "pytorch-cu130", marker = "sys_platform == 'linux'" },
+]
