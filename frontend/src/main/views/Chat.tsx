@@ -6,9 +6,10 @@ import {
     Paper,
     Box,
     CircularProgress,
+    Typography,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import remarkGfm from "remark-gfm";
 import rehypeStarryNight from "rehype-starry-night";
 import { MarkdownHooks } from "react-markdown";
@@ -53,6 +54,50 @@ function ChatMessageLoading() {
     );
 }
 
+type EmptyChatPromptProps = {
+    onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+    currentMessage: string;
+    setCurrentMessage: (message: string) => void;
+};
+
+function EmptyChatPrompt({
+    onSubmit,
+    currentMessage,
+    setCurrentMessage,
+}: EmptyChatPromptProps) {
+    return (
+        <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            sx={{ height: "100vh" }}
+        >
+            <form onSubmit={onSubmit}>
+                <Stack direction="row" spacing={1}>
+                    <TextField
+                        variant="outlined"
+                        fullWidth
+                        sx={{
+                            minWidth: "60vw",
+                        }}
+                        slotProps={{
+                            input: {
+                                sx: { borderRadius: 5 },
+                            },
+                        }}
+                        placeholder="Ask coder chat"
+                        value={currentMessage}
+                        onChange={(e) => setCurrentMessage(e.target.value)}
+                    />
+                    <IconButton size="large" type="submit">
+                        <SendIcon />
+                    </IconButton>
+                </Stack>
+            </form>
+        </Box>
+    );
+}
+
 export default function Chat() {
     const [chatId, setChatId] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -62,6 +107,24 @@ export default function Chat() {
     const [inProcessMessageResponse, setInProcessMessageResponse] = useState<
         string[]
     >([]);
+
+    const chatBoxRef = useRef<HTMLDivElement>(null);
+    const [chatBoxHeight, setChatBoxHeight] = useState<number>(100);
+
+    useLayoutEffect(() => {
+        const updateHeight = () => {
+            if (chatBoxRef.current) {
+                const { height } = chatBoxRef.current.getBoundingClientRect();
+                setChatBoxHeight(height);
+            }
+        };
+
+        updateHeight();
+
+        window.addEventListener("resize", updateHeight);
+
+        return () => window.removeEventListener("resize", updateHeight);
+    }, []);
 
     useEffect(() => {
         if (chatId !== null) {
@@ -83,7 +146,7 @@ export default function Chat() {
         getChatId();
     }, [chatId]);
 
-    const obSubmit = (event: FormEvent<HTMLFormElement>) => {
+    const onSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (currentMessage.length === 0) return;
         setMessages((prev) => [
@@ -123,25 +186,37 @@ export default function Chat() {
 
     return (
         <Container sx={{ pt: 2 }}>
-            <Stack direction="column" spacing={2}>
-                <Stack direction="column" spacing={1}>
-                    {messages.map((message, index) => (
-                        <Box
-                            key={index}
-                            sx={{
-                                display: "flex",
-                                flexDirection: "row",
-                                justifyContent: message.user
-                                    ? "flex-end"
-                                    : "flex-start",
-                                maxWidth: "100%",
-                            }}
-                        >
-                            <ChatMessage content={message.content} />
-                        </Box>
-                    ))}
-                    {loadingMessageResponse &&
-                        inProcessMessageResponse.length === 0 && (
+            {messages.length === 0 && (
+                <EmptyChatPrompt
+                    currentMessage={currentMessage}
+                    setCurrentMessage={setCurrentMessage}
+                    onSubmit={onSubmit}
+                />
+            )}
+            {messages.length !== 0 && (
+                <Box flexGrow={1}>
+                    <Stack
+                        direction="column-reverse"
+                        spacing={1}
+                        sx={{
+                            height: `calc(100vh - ${chatBoxHeight + 40}px)`,
+                            overflowY: "auto",
+                        }}
+                    >
+                        {loadingMessageResponse &&
+                            inProcessMessageResponse.length === 0 && (
+                                <Box
+                                    sx={{
+                                        display: "flex",
+                                        flexDirection: "row",
+                                        justifyContent: "flex-start",
+                                        maxWidth: "100%",
+                                    }}
+                                >
+                                    <ChatMessageLoading />
+                                </Box>
+                            )}
+                        {inProcessMessageResponse.length > 0 && (
                             <Box
                                 sx={{
                                     display: "flex",
@@ -150,44 +225,63 @@ export default function Chat() {
                                     maxWidth: "100%",
                                 }}
                             >
-                                <ChatMessageLoading />
+                                <ChatMessage
+                                    content={inProcessMessageResponse.join("")}
+                                />
                             </Box>
                         )}
-                    {inProcessMessageResponse.length > 0 && (
-                        <Box
-                            sx={{
-                                display: "flex",
-                                flexDirection: "row",
-                                justifyContent: "flex-start",
-                                maxWidth: "100%",
-                            }}
-                        >
-                            <ChatMessage
-                                content={inProcessMessageResponse.join("")}
-                            />
-                        </Box>
-                    )}
-                </Stack>
-                <form onSubmit={obSubmit}>
-                    <Stack direction="row" spacing={1}>
-                        <TextField
-                            variant="outlined"
-                            fullWidth
-                            slotProps={{
-                                input: {
-                                    sx: { borderRadius: 5 },
-                                },
-                            }}
-                            placeholder="Ask coder chat"
-                            value={currentMessage}
-                            onChange={(e) => setCurrentMessage(e.target.value)}
-                        />
-                        <IconButton size="large" type="submit">
-                            <SendIcon />
-                        </IconButton>
+                        {messages
+                            .slice()
+                            .reverse()
+                            .map((message, index) => (
+                                <Box
+                                    key={index}
+                                    sx={{
+                                        display: "flex",
+                                        flexDirection: "row",
+                                        justifyContent: message.user
+                                            ? "flex-end"
+                                            : "flex-start",
+                                        maxWidth: "100%",
+                                    }}
+                                >
+                                    <ChatMessage content={message.content} />
+                                </Box>
+                            ))}
                     </Stack>
-                </form>
-            </Stack>
+                    <Box
+                        sx={{
+                            position: "fixed",
+                            bottom: 10,
+                            width: "100%",
+                            maxWidth: "lg",
+                        }}
+                        ref={chatBoxRef}
+                    >
+                        <form onSubmit={onSubmit}>
+                            <Stack direction="row" spacing={1}>
+                                <TextField
+                                    variant="outlined"
+                                    fullWidth
+                                    slotProps={{
+                                        input: {
+                                            sx: { borderRadius: 5 },
+                                        },
+                                    }}
+                                    placeholder="Ask coder chat"
+                                    value={currentMessage}
+                                    onChange={(e) =>
+                                        setCurrentMessage(e.target.value)
+                                    }
+                                />
+                                <IconButton size="large" type="submit">
+                                    <SendIcon />
+                                </IconButton>
+                            </Stack>
+                        </form>
+                    </Box>
+                </Box>
+            )}
         </Container>
     );
 }
