@@ -9,6 +9,7 @@ import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 
 // Even though webstorm doesn't like this, this works
+// @ts-expect-error this appeases the build when .css is included, but it fails to run when .css is included..
 import "@wooorm/starry-night/style/dark";
 
 createRoot(document.getElementById("root")!).render(

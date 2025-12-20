@@ -6,7 +6,6 @@ import {
     Paper,
     Box,
     CircularProgress,
-    Typography,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -169,7 +168,8 @@ export default function Chat() {
         });
 
         let responseMessage = "";
-        const stringReader = resp.body.pipeThrough(new TextDecoderStream());
+        const stringReader = resp.body!.pipeThrough(new TextDecoderStream());
+        // @ts-expect-error the typing of this is weird
         for await (const chunk of stringReader) {
             setInProcessMessageResponse((prev) => [...prev, chunk]);
             responseMessage += chunk;

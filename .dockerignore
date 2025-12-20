@@ -1,0 +1,10 @@
+**/.idea/
+**/.git/
+**/.ruff_cache/
+
+**/node_modules/
+**/.venv/
+
+*/coverage/
+
+**/__pycache__/
