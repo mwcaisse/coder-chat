@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from starlette.staticfiles import StaticFiles
 
+from src.config import CONFIG
 from src.router.chat import router as chat_router
 
 app = FastAPI()
@@ -13,5 +14,5 @@ api.include_router(chat_router)
 app.mount("/api", api)
 
 # Add our static files
-# TODO: configure this with env vars, but should be fine for now
-app.mount("/", StaticFiles(directory="static", html=True))
+if CONFIG.serve_static_files:
+    app.mount("/", StaticFiles(directory=CONFIG.static_directory, html=True))

@@ -7,7 +7,7 @@ from uuid import UUID
 
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 
-MODEL_NAME = "Qwen/Qwen3-1.7B"
+from src.config import CONFIG
 
 
 @dataclass
@@ -75,9 +75,9 @@ def send_message_to_chat(chat_id: UUID, message: str):
 
 
 def process_message(message: str, previous_messages: list[str]) -> Generator[str, None, None]:
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    tokenizer = AutoTokenizer.from_pretrained(CONFIG.model_path, local_files_only=True)
     model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME, dtype="auto", device_map="auto"
+        CONFIG.model_path, dtype="auto", device_map="auto"
     )
 
     prompt = """
@@ -130,9 +130,9 @@ def summarize_chat_message(message: ChatMessage):
 
 def summarize_message(message: str) -> str:
     # TODO: Deduplicate this with process_message above, but leave here for now
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    tokenizer = AutoTokenizer.from_pretrained(CONFIG.model_path)
     model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME, dtype="auto", device_map="auto"
+        CONFIG.model_path, dtype="auto", device_map="auto"
     )
 
     prompt = """
@@ -153,8 +153,5 @@ def summarize_message(message: str) -> str:
     )
     output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist()
     content = tokenizer.decode(output_ids[0:], skip_special_tokens=True).strip("\n")
-
-    print("Summarized message")
-    print(content)
 
     return content
