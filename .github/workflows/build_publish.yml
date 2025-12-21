@@ -1,0 +1,29 @@
+name: Build and Publish Image
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  build_publish_gitlab:
+    name: "Build and Publish Image (Gitlab)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v4
+
+      - name: Build and Publish
+        uses: mwcaisse/gha-common/actions/build_and_push_image@master
+        with:
+          registry: registry.gitlab.com
+          username: ${{ vars.GITLAB_USERNAME }}
+          password: ${{ secrets.GITLAB_TOKEN }}
+          tags: |
+            registry.gitlab.com/mwcaisse/application-images/coder-chat:latest
+            registry.gitlab.com/mwcaisse/application-images/coder-chat:${{ github.sha }}
