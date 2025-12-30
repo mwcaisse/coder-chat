@@ -1,4 +1,3 @@
-import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -7,8 +6,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import create_engine
 
 from src.config_models import DatabaseSettings
-from src.data_models.base import CoderChatBaseModel
-from src.data_models.all_metadata import *
+from src.data_models.base import CoderChatBaseModel  # noqa
+from src.data_models.all_metadata import *  # noqa
+
 from src.util.database_utils import create_database_connection_url
 
 # this is the Alembic Config object, which provides
