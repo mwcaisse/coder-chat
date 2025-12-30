@@ -32,10 +32,7 @@ def get_chat(chat_id: UUID) -> Chat | None:
 
 def create_chat() -> Chat:
     chat_id = uuid.uuid4()
-    chat = Chat(
-        id=chat_id,
-        messages=[]
-    )
+    chat = Chat(id=chat_id, messages=[])
 
     CHATS[chat_id] = chat
 
@@ -49,10 +46,7 @@ def stream_message_results(chat_id: UUID, results_stream):
         message += text_token
         yield text_token
 
-    chat_message = ChatMessage(
-        from_user=False,
-        content=message
-    )
+    chat_message = ChatMessage(from_user=False, content=message)
     CHATS[chat_id].messages.append(chat_message)
     summarize_chat_message(chat_message)
 
@@ -63,10 +57,7 @@ def send_message_to_chat(chat_id: UUID, message: str):
 
     chat = CHATS[chat_id]
 
-    chat.messages.append(ChatMessage(
-        from_user=True,
-        content=message
-    ))
+    chat.messages.append(ChatMessage(from_user=True, content=message))
 
     previous_messages = [cm.content for cm in chat.messages[:-1]]
     results_stream = process_message(message, previous_messages)
@@ -74,7 +65,9 @@ def send_message_to_chat(chat_id: UUID, message: str):
     return stream_message_results(chat_id, results_stream)
 
 
-def process_message(message: str, previous_messages: list[str]) -> Generator[str, None, None]:
+def process_message(
+    message: str, previous_messages: list[str]
+) -> Generator[str, None, None]:
     tokenizer = AutoTokenizer.from_pretrained(CONFIG.model_path, local_files_only=True)
     model = AutoModelForCausalLM.from_pretrained(
         CONFIG.model_path, dtype="auto", device_map="auto"
@@ -121,10 +114,7 @@ def summarize_chat_message(message: ChatMessage):
     def thread_fun():
         message.summary = summarize_message(message.content)
 
-    thread = Thread(
-        target=thread_fun,
-        kwargs={}
-    )
+    thread = Thread(target=thread_fun, kwargs={})
     thread.start()
 
 
@@ -147,11 +137,8 @@ def summarize_message(message: str) -> str:
     )
     model_inputs = tokenizer([text], return_tensors="pt").to(model.device)
 
-    generated_ids = model.generate(
-        **model_inputs,
-        max_new_tokens=32768
-    )
-    output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist()
+    generated_ids = model.generate(**model_inputs, max_new_tokens=32768)
+    output_ids = generated_ids[0][len(model_inputs.input_ids[0]) :].tolist()
     content = tokenizer.decode(output_ids[0:], skip_special_tokens=True).strip("\n")
 
     return content

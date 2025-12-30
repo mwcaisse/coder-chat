@@ -17,7 +17,10 @@ def fetch_chat_r(chat_id: UUID):
 
     return ChatResponseModel(
         id=chat.id,
-        messages=[ChatMessage(from_user=cm.from_user, content=cm.content, summary=cm.summary) for cm in chat.messages]
+        messages=[
+            ChatMessage(from_user=cm.from_user, content=cm.content, summary=cm.summary)
+            for cm in chat.messages
+        ],
     )
 
 
