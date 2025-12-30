@@ -17,6 +17,13 @@ Create an `.env` file with the following contents:
 CC_SERVE_STATIC_FILES=false
 # Path to the model (path downloaded to in previous step)
 CC_MODEL_PATH=/path/to/model/to/use/qwen3-1.7B
+
+# Database connection info
+CC_DB_HOST=
+CC_DB_PORT=
+CC_DB_USER=
+CC_DB_PASSWORD=
+CC_DB_DATABASE=
 ```
 
 ### Running application
