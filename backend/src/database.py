@@ -1,3 +1,6 @@
+from typing import Annotated
+
+from fastapi import Depends
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -10,3 +13,6 @@ def get_database_session():
     engine = create_engine(db_url)
     with Session(engine) as session:
         yield session
+
+
+DatabaseSessionDepend = Annotated[Session, Depends(get_database_session)]

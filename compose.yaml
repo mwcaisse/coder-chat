@@ -1,11 +1,10 @@
-
 services:
   db:
     image: postgres:18-alpine
     environment:
       POSTGRES_USER: cc_user
       POSTGRES_PASSWORD: cc_password
-      POSTGRES_DATABASE: coder_chat
+      POSTGRES_DB: coder_chat
     volumes:
       - pg_data:/var/lib/postgresql/
     ports:
