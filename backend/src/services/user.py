@@ -1,13 +1,21 @@
-import json
+import secrets
+import uuid
+import datetime
 
 import argon2
+import jwt
 from argon2 import PasswordHasher
 from sqlalchemy import select, or_
 from sqlalchemy.orm import Session
 
-from src.data_models.user import User
+from src.data_models.user import User, UserRefreshToken
 from src.exceptions import ValidationError, InvalidCredentialsError, UserLockedError
-from src.models.user import CreateNewUserModel, UserLoginModel
+from src.models.user import (
+    CreateNewUserModel,
+    UserLoginModel,
+    UserLoginResponse,
+    UserTokenLoginModel,
+)
 
 
 def _throw_if_already_exists(user: CreateNewUserModel, db: Session):
@@ -79,7 +87,7 @@ def create_user(create_model: CreateNewUserModel, db: Session):
     db.commit()
 
 
-def login(login_model: UserLoginModel, db: Session):
+def login(login_model: UserLoginModel, db: Session) -> UserLoginResponse:
     user_query = (
         select(User)
         .select_from(User)
@@ -96,3 +104,60 @@ def login(login_model: UserLoginModel, db: Session):
 
     if not _verify_password(user.password, login_model.password):
         raise InvalidCredentialsError()
+
+    return UserLoginResponse(
+        access_token=_create_user_access_token(user),
+        refresh_token=_create_refresh_token(user.id, db),
+    )
+
+
+def login_token(login_model: UserTokenLoginModel, db: Session) -> UserLoginResponse:
+    pass
+
+
+def _create_user_access_token(user: User) -> str:
+    """
+    Creates an access token (JWT) for the given user
+
+    :param user:
+    :return:
+    """
+
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    payload = {
+        "iat": now,
+        "nbf": now,
+        "exp": now + datetime.timedelta(minutes=60),
+        "sub": str(user.id),
+        "username": user.username,
+        "name": user.name,
+        "email": user.email,
+    }
+    # TODO: parameterize the secret, this really shouldn't be hardcoded
+    return jwt.encode(payload, "DA_SECRET", algorithm="HS256")
+
+
+def _generate_refresh_token() -> str:
+    return secrets.token_urlsafe(128)
+
+
+def _create_refresh_token(user_id: uuid.UUID, db: Session) -> str:
+    """
+    Creates a refresh token for the user with the given user id
+    :param user_id:
+    :return:
+    """
+    token = _generate_refresh_token()
+    token_hash = _hash_password(token)
+
+    db.add(
+        UserRefreshToken(
+            user_id=user_id,
+            token_hash=token_hash,
+            expire_date=datetime.datetime.now(tz=datetime.timezone.utc)
+            + datetime.timedelta(days=7),
+        )
+    )
+    db.commit()
+
+    return token

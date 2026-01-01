@@ -1,7 +1,7 @@
 import datetime
 import uuid
 
-from sqlalchemy import String
+from sqlalchemy import String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.data_models.base import (
@@ -17,7 +17,6 @@ class User(CoderChatBaseModel):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=generate_uuid)
     username: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     email: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
-    # TODO: Double check the length on this
     password: Mapped[str] = mapped_column(String(1024), nullable=False)
 
     name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -26,3 +25,16 @@ class User(CoderChatBaseModel):
     create_date: Mapped[datetime.datetime] = mapped_column(
         nullable=False, default=generate_current_date
     )
+
+
+class UserRefreshToken(CoderChatBaseModel):
+    __tablename__ = "user_refresh_token"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=generate_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"), nullable=False)
+    token_hash = mapped_column(String(1024), nullable=False)
+
+    create_date: Mapped[datetime.datetime] = mapped_column(
+        nullable=False, default=generate_current_date
+    )
+    expire_date: Mapped[datetime.datetime] = mapped_column(nullable=False)

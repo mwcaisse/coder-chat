@@ -4,7 +4,7 @@ from fastapi import APIRouter, Response, status
 
 from src.database import DatabaseSessionDepend
 from src.exceptions import ValidationError, InvalidCredentialsError, UserLockedError
-from src.models.user import CreateNewUserModel, UserLoginModel
+from src.models.user import CreateNewUserModel, UserLoginModel, UserLoginResponse
 from src.services.user import create_user, login
 
 router = APIRouter()
@@ -24,11 +24,12 @@ def create_user_r(user: CreateNewUserModel, db: DatabaseSessionDepend):
         )
 
 
-@router.post("/user/login/")
+@router.post(
+    "/user/login/", response_model=UserLoginResponse, status_code=status.HTTP_200_OK
+)
 def login_r(user_login: UserLoginModel, db: DatabaseSessionDepend):
     try:
-        login(user_login, db)
-        return Response(status_code=status.HTTP_200_OK)
+        return login(user_login, db)
 
     except InvalidCredentialsError:
         return Response(
