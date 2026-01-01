@@ -14,3 +14,8 @@ class CreateNewUserModel(BaseModel):
             return value
 
         raise ValueError("Invalid email, must contain @")
+
+
+class UserLoginModel(BaseModel):
+    username: str
+    password: str
