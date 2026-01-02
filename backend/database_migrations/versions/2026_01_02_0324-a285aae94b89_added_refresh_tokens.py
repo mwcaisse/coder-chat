@@ -1,8 +1,8 @@
 """added refresh tokens
 
-Revision ID: 723890d94bdb
+Revision ID: a285aae94b89
 Revises: 2222ddddac79
-Create Date: 2026-01-01 23:41:24.932259+00:00
+Create Date: 2026-01-02 03:24:58.911398+00:00
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "723890d94bdb"
+revision: str = "a285aae94b89"
 down_revision: Union[str, Sequence[str], None] = "2222ddddac79"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -26,6 +26,7 @@ def upgrade() -> None:
         "user_refresh_token",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("token_prefix", sa.String(length=16), nullable=False),
         sa.Column("token_hash", sa.String(length=1024), nullable=False),
         sa.Column("create_date", sa.DateTime(), nullable=False),
         sa.Column("expire_date", sa.DateTime(), nullable=False),
@@ -34,6 +35,9 @@ def upgrade() -> None:
             ["user.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "user_id", "token_prefix", name="uc_user_refresh_token_user_id_token_prefix"
+        ),
     )
     # ### end Alembic commands ###
 

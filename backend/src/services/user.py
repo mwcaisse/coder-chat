@@ -6,7 +6,7 @@ from typing import NamedTuple
 import argon2
 import jwt
 from argon2 import PasswordHasher
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, and_
 from sqlalchemy.orm import Session
 
 from src.config import CONFIG
@@ -94,32 +94,69 @@ def create_user(create_model: CreateNewUserModel, db: Session):
     db.commit()
 
 
-def login(login_model: UserLoginModel, db: Session) -> UserLoginResponse:
-    user_query = (
-        select(User)
-        .select_from(User)
-        .where(User.username == login_model.username.lower())
-    )
+def _validate_login_user(username: str, db: Session) -> User:
+    user_query = select(User).select_from(User).where(User.username == username.lower())
     user = db.scalars(user_query).first()
 
     if user is None:
-        _verify_password(FAKE_HASH, login_model.password)
+        # Validate the password, so this function takes the same amount of time if the user does not exist as if it does
+        _verify_password(FAKE_HASH, username)
         raise InvalidCredentialsError()
 
     if user.locked:
         raise UserLockedError()
 
-    if not _verify_password(user.password, login_model.password):
-        raise InvalidCredentialsError()
+    return user
 
+
+def _create_login_response_for_user(user: User, db: Session) -> UserLoginResponse:
     return UserLoginResponse(
         access_token=_create_user_access_token(user),
         refresh_token=_create_refresh_token(user.id, db),
     )
 
 
+def login(login_model: UserLoginModel, db: Session) -> UserLoginResponse:
+    user = _validate_login_user(login_model.username, db)
+
+    if not _verify_password(user.password, login_model.password):
+        raise InvalidCredentialsError()
+
+    return _create_login_response_for_user(user, db)
+
+
 def login_token(login_model: UserTokenLoginModel, db: Session) -> UserLoginResponse:
-    pass
+    user = _validate_login_user(login_model.username, db)
+
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+
+    token_prefix = login_model.refresh_token[:16]
+    provided_token = login_model.refresh_token[16:]
+
+    token_query = (
+        select(UserRefreshToken)
+        .select_from(UserRefreshToken)
+        .where(
+            and_(
+                UserRefreshToken.user_id == user.id,
+                UserRefreshToken.token_prefix == token_prefix,
+                UserRefreshToken.expire_date > now,
+            )
+        )
+    )
+    token = db.scalars(token_query).first()
+
+    if token is None:
+        raise InvalidCredentialsError()
+
+    if not _verify_password(token.token_hash, provided_token):
+        raise InvalidCredentialsError()
+
+    # we've consumed the token, delete it
+    db.delete(token)
+    db.commit()
+
+    return _create_login_response_for_user(user, db)
 
 
 class JwtUser(NamedTuple):
@@ -173,8 +210,8 @@ def validate_user_access_token(token: str) -> JwtUser:
         raise InvalidTokenError()
 
 
-def _generate_refresh_token() -> str:
-    return secrets.token_urlsafe(128)
+def _generate_refresh_token() -> tuple[str, str]:
+    return secrets.token_urlsafe(16)[:16], secrets.token_urlsafe(128)
 
 
 def _create_refresh_token(user_id: uuid.UUID, db: Session) -> str:
@@ -183,12 +220,13 @@ def _create_refresh_token(user_id: uuid.UUID, db: Session) -> str:
     :param user_id:
     :return:
     """
-    token = _generate_refresh_token()
+    token_prefix, token = _generate_refresh_token()
     token_hash = _hash_password(token)
 
     db.add(
         UserRefreshToken(
             user_id=user_id,
+            token_prefix=token_prefix,
             token_hash=token_hash,
             expire_date=datetime.datetime.now(tz=datetime.timezone.utc)
             + datetime.timedelta(days=7),
@@ -196,4 +234,4 @@ def _create_refresh_token(user_id: uuid.UUID, db: Session) -> str:
     )
     db.commit()
 
-    return token
+    return f"{token_prefix}{token}"

@@ -1,7 +1,7 @@
 import datetime
 import uuid
 
-from sqlalchemy import String, ForeignKey
+from sqlalchemy import String, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.data_models.base import (
@@ -29,9 +29,15 @@ class User(CoderChatBaseModel):
 
 class UserRefreshToken(CoderChatBaseModel):
     __tablename__ = "user_refresh_token"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "token_prefix", name="uc_user_refresh_token_user_id_token_prefix"
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=generate_uuid)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"), nullable=False)
+    token_prefix: Mapped[str] = mapped_column(String(16), nullable=False)
     token_hash = mapped_column(String(1024), nullable=False)
 
     create_date: Mapped[datetime.datetime] = mapped_column(

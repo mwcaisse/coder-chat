@@ -1,5 +1,5 @@
 import json
-from typing import Annotated
+from typing import Annotated, Callable
 
 from fastapi import APIRouter, Response, status, Depends
 from fastapi.security import (
@@ -20,8 +20,14 @@ from src.models.user import (
     UserLoginModel,
     UserLoginResponse,
     UserResponse,
+    UserTokenLoginModel,
 )
-from src.services.user import create_user, login, validate_user_access_token
+from src.services.user import (
+    create_user,
+    login,
+    validate_user_access_token,
+    login_token,
+)
 
 router = APIRouter()
 
@@ -40,17 +46,14 @@ def create_user_r(user: CreateNewUserModel, db: DatabaseSessionDepend):
         )
 
 
-@router.post(
-    "/user/login/", response_model=UserLoginResponse, status_code=status.HTTP_200_OK
-)
-def login_r(user_login: UserLoginModel, db: DatabaseSessionDepend):
+def _perform_login(login_fun: Callable[[], UserLoginResponse]):
     try:
-        return login(user_login, db)
+        return login_fun()
 
     except InvalidCredentialsError:
         return Response(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content=json.dumps({"error": "Invalid username or password"}),
+            content=json.dumps({"error": "Invalid username or credentials"}),
         )
 
     except UserLockedError:
@@ -58,6 +61,22 @@ def login_r(user_login: UserLoginModel, db: DatabaseSessionDepend):
             status_code=status.HTTP_401_UNAUTHORIZED,
             content=json.dumps({"error": "Account is currently locked"}),
         )
+
+
+@router.post(
+    "/user/login/", response_model=UserLoginResponse, status_code=status.HTTP_200_OK
+)
+def login_r(user_login: UserLoginModel, db: DatabaseSessionDepend):
+    return _perform_login(lambda: login(user_login, db))
+
+
+@router.post(
+    "/user/login/token",
+    response_model=UserLoginResponse,
+    status_code=status.HTTP_200_OK,
+)
+def login_token_r(token_login: UserTokenLoginModel, db: DatabaseSessionDepend):
+    return _perform_login(lambda: login_token(token_login, db))
 
 
 bearer_security = HTTPBearer()
