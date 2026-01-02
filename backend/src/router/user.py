@@ -28,6 +28,7 @@ from src.services.user import (
     validate_user_access_token,
     login_token,
 )
+from src.util.auth import verify_auth_token
 
 router = APIRouter()
 
@@ -79,15 +80,8 @@ def login_token_r(token_login: UserTokenLoginModel, db: DatabaseSessionDepend):
     return _perform_login(lambda: login_token(token_login, db))
 
 
-bearer_security = HTTPBearer()
-
-
 @router.get("/user/me/", response_model=UserResponse, status_code=status.HTTP_200_OK)
-def me(credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_security)]):
-    try:
-        user = validate_user_access_token(credentials.credentials)
-        return UserResponse(
-            id=user.id, username=user.username, name=user.name, email=user.email
-        )
-    except InvalidTokenError:
-        raise bearer_security.make_not_authenticated_error()
+def me(user=Depends(verify_auth_token)):
+    return UserResponse(
+        id=user.id, username=user.username, name=user.name, email=user.email
+    )
