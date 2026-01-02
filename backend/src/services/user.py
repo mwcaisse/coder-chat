@@ -1,6 +1,7 @@
 import secrets
 import uuid
 import datetime
+from typing import NamedTuple
 
 import argon2
 import jwt
@@ -8,8 +9,14 @@ from argon2 import PasswordHasher
 from sqlalchemy import select, or_
 from sqlalchemy.orm import Session
 
+from src.config import CONFIG
 from src.data_models.user import User, UserRefreshToken
-from src.exceptions import ValidationError, InvalidCredentialsError, UserLockedError
+from src.exceptions import (
+    ValidationError,
+    InvalidCredentialsError,
+    UserLockedError,
+    InvalidTokenError,
+)
 from src.models.user import (
     CreateNewUserModel,
     UserLoginModel,
@@ -115,6 +122,16 @@ def login_token(login_model: UserTokenLoginModel, db: Session) -> UserLoginRespo
     pass
 
 
+class JwtUser(NamedTuple):
+    id: uuid.UUID
+    username: str
+    name: str
+    email: str
+
+
+JWT_SIGN_ALGO = "HS256"
+
+
 def _create_user_access_token(user: User) -> str:
     """
     Creates an access token (JWT) for the given user
@@ -133,8 +150,27 @@ def _create_user_access_token(user: User) -> str:
         "name": user.name,
         "email": user.email,
     }
-    # TODO: parameterize the secret, this really shouldn't be hardcoded
-    return jwt.encode(payload, "DA_SECRET", algorithm="HS256")
+    return jwt.encode(payload, CONFIG.jwt_sign_secret, algorithm=JWT_SIGN_ALGO)
+
+
+def validate_user_access_token(token: str) -> JwtUser:
+    try:
+        decoded_payload = jwt.decode(
+            token,
+            CONFIG.jwt_sign_secret,
+            algorithms=[JWT_SIGN_ALGO],
+            options={
+                "require": ["iat", "nbf", "exp", "sub", "username", "name", "email"]
+            },
+        )
+        return JwtUser(
+            id=uuid.UUID(decoded_payload["sub"]),
+            username=decoded_payload["username"],
+            name=decoded_payload["name"],
+            email=decoded_payload["email"],
+        )
+    except jwt.PyJWTError:
+        raise InvalidTokenError()
 
 
 def _generate_refresh_token() -> str:

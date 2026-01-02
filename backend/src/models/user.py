@@ -1,3 +1,5 @@
+import uuid
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -29,3 +31,10 @@ class UserTokenLoginModel(BaseModel):
 class UserLoginResponse(BaseModel):
     access_token: str
     refresh_token: str
+
+
+class UserResponse(BaseModel):
+    id: uuid.UUID
+    username: str
+    name: str
+    email: str

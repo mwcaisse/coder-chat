@@ -1,11 +1,27 @@
 import json
+from typing import Annotated
 
-from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, Response, status, Depends
+from fastapi.security import (
+    OAuth2PasswordBearer,
+    HTTPBearer,
+    HTTPAuthorizationCredentials,
+)
 
 from src.database import DatabaseSessionDepend
-from src.exceptions import ValidationError, InvalidCredentialsError, UserLockedError
-from src.models.user import CreateNewUserModel, UserLoginModel, UserLoginResponse
-from src.services.user import create_user, login
+from src.exceptions import (
+    ValidationError,
+    InvalidCredentialsError,
+    UserLockedError,
+    InvalidTokenError,
+)
+from src.models.user import (
+    CreateNewUserModel,
+    UserLoginModel,
+    UserLoginResponse,
+    UserResponse,
+)
+from src.services.user import create_user, login, validate_user_access_token
 
 router = APIRouter()
 
@@ -42,3 +58,17 @@ def login_r(user_login: UserLoginModel, db: DatabaseSessionDepend):
             status_code=status.HTTP_401_UNAUTHORIZED,
             content=json.dumps({"error": "Account is currently locked"}),
         )
+
+
+bearer_security = HTTPBearer()
+
+
+@router.get("/user/me/", response_model=UserResponse, status_code=status.HTTP_200_OK)
+def me(credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_security)]):
+    try:
+        user = validate_user_access_token(credentials.credentials)
+        return UserResponse(
+            id=user.id, username=user.username, name=user.name, email=user.email
+        )
+    except InvalidTokenError:
+        raise bearer_security.make_not_authenticated_error()

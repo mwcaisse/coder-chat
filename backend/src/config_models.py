@@ -1,5 +1,11 @@
+import secrets
+
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def generate_random_jwt_secret() -> str:
+    return secrets.token_urlsafe(128)
 
 
 class DatabaseSettings(BaseModel):
@@ -31,3 +37,5 @@ class ApplicationSettings(BaseSettings):
     static_directory: str = "static"
 
     db: DatabaseSettings
+
+    jwt_sign_secret: str = generate_random_jwt_secret()
