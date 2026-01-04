@@ -26,7 +26,8 @@
         "react-dom": "^19.2.0",
         "react-markdown": "^10.1.0",
         "rehype-starry-night": "^2.2.0",
-        "remark-gfm": "^4.0.1"
+        "remark-gfm": "^4.0.1",
+        "zustand": "^5.0.9"
     },
     "devDependencies": {
         "@eslint/js": "^9.39.1",

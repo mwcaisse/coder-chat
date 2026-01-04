@@ -9,6 +9,7 @@ import {
 import { FormEvent, useState } from "react";
 import ky, { HTTPError } from "ky";
 import { useToastContext } from "@app/contexts/ToastContext.tsx";
+import { useAuthStore } from "@app/stores/AuthenticationStore.ts";
 
 type LoginResponse = {
     access_token: string;
@@ -33,6 +34,7 @@ export default function Login() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const updateAuthentication = useAuthStore((state) => state.update);
 
     const toast = useToastContext();
 
@@ -41,7 +43,10 @@ export default function Login() {
         setErrorMessage(null);
         try {
             const resp = await submitLogin(username, password);
-            // TODO: Navigate to chat
+            updateAuthentication(resp.access_token, resp.refresh_token);
+            // TODO: Now we still must navigate
+            //  this is the only place that we will be doing this ya?
+            //  other place will be in the guard, if we see that the JWT is expired
         } catch (e) {
             setPassword("");
             console.dir(e);
