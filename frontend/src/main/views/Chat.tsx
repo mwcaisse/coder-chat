@@ -12,6 +12,8 @@ import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import remarkGfm from "remark-gfm";
 import rehypeStarryNight from "rehype-starry-night";
 import { MarkdownHooks } from "react-markdown";
+import { useAuthStore } from "@app/stores/AuthenticationStore.ts";
+import ky from "ky";
 
 type Message = {
     content: string;
@@ -98,6 +100,7 @@ function EmptyChatPrompt({
 }
 
 export default function Chat() {
+    const authToken = useAuthStore((state) => state.authToken);
     const [chatId, setChatId] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [currentMessage, setCurrentMessage] = useState("");
@@ -126,24 +129,26 @@ export default function Chat() {
     }, []);
 
     useEffect(() => {
-        if (chatId !== null) {
+        if (authToken === null || chatId !== null) {
             return;
         }
 
         // otherwise we shall fetch a (rug) chat id
         const getChatId = async () => {
-            const resp = await fetch("/api/chat/", {
-                method: "POST",
-                headers: {
-                    Accept: "application/json",
-                },
-            });
-            const data = await resp.json();
+            const data: { id: string } = await ky
+                .post("/api/chat/", {
+                    headers: {
+                        Accept: "application/json",
+                        Authorization: `Bearer ${authToken}`,
+                    },
+                })
+                .json();
+
             setChatId(data.id);
             console.log("Created a chat with id: ", data.id);
         };
         getChatId();
-    }, [chatId]);
+    }, [authToken, chatId]);
 
     const onSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -164,6 +169,7 @@ export default function Chat() {
             headers: {
                 "Content-Type": "application/json",
                 Accept: "application/json",
+                Authorization: `Bearer ${authToken}`,
             },
         });
 

@@ -1,9 +1,19 @@
 import { useAuthStore } from "@app/stores/AuthenticationStore.ts";
 import { useNavigate } from "react-router";
 import { useEffect } from "react";
+import { jwtDecode } from "jwt-decode";
 
 function authTokenValid(token: string | null): boolean {
-    return token !== null;
+    if (token === null || token.length === 0) {
+        return false;
+    }
+
+    const payload = jwtDecode(token);
+    if (payload.exp === undefined) {
+        return false;
+    }
+    // token is valid if the expiration date is in the future
+    return Date.now() < payload.exp * 1000;
 }
 
 export function ProtectedRoute({ children }: React.PropsWithChildren) {
