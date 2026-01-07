@@ -1,19 +1,13 @@
 import json
-from typing import Annotated, Callable
+from typing import Callable
 
 from fastapi import APIRouter, Response, status, Depends
-from fastapi.security import (
-    OAuth2PasswordBearer,
-    HTTPBearer,
-    HTTPAuthorizationCredentials,
-)
 
 from src.database import DatabaseSessionDepend
 from src.exceptions import (
     ValidationError,
     InvalidCredentialsError,
     UserLockedError,
-    InvalidTokenError,
 )
 from src.models.user import (
     CreateNewUserModel,
@@ -25,7 +19,6 @@ from src.models.user import (
 from src.services.user import (
     create_user,
     login,
-    validate_user_access_token,
     login_token,
 )
 from src.util.auth import verify_auth_token
