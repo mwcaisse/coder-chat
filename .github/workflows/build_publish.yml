@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout master
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build and Publish
         uses: mwcaisse/gha-common/actions/build_and_push_image@master

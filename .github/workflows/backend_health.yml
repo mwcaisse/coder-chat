@@ -1,0 +1,61 @@
+name: Backend Lint & Format
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  format_check:
+    name: "Check Backend Formatting"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.9.22"
+          enable-cache: true
+
+      - name: Install python
+        run: uv python install
+
+      - name: Format check
+        run: uv run ruff format --check
+
+  linter_check:
+    name: "Backend Linting"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.9.22"
+          enable-cache: true
+
+      - name: Install python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Format check
+        run: uv run ruff check
