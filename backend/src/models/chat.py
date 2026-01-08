@@ -18,6 +18,12 @@ class CreateChatRequestModel(BaseModel):
     language: str | None
 
 
+class CreateChatWithMessageRequestModel(BaseModel):
+    message: str
+    name: str | None = None
+    language: str | None = None
+
+
 class ChatResponseModel(BaseModel):
     id: uuid.UUID
     name: str

@@ -14,6 +14,7 @@ from src.models.chat import (
     ChatResponseModel,
     CreateChatRequestModel,
     ChatMessageResponseModel,
+    CreateChatWithMessageRequestModel,
 )
 from src.services.user import JwtUser
 
@@ -77,6 +78,29 @@ def create_chat(
     db.commit()
 
     return _chat_to_response_model(chat, [])
+
+
+def create_chat_with_message(
+    create_model: CreateChatWithMessageRequestModel, user: JwtUser, db: Session
+):
+    name = create_model.name if create_model.name else create_model.message[:50]
+
+    chat = Chat(name=name, language=create_model.language, user_id=user.id)
+    db.add(chat)
+    db.flush()
+
+    message_model = ChatMessage(
+        chat_id=chat.id, content=create_model.message, from_user=True
+    )
+    db.add(message_model)
+    db.commit()
+
+    chat_response = _chat_to_response_model(chat, [message_model])
+    yield chat_response.model_dump_json()
+    yield "\n"
+
+    results_stream = process_message(create_model.message, [])
+    yield from stream_message_results(chat.id, results_stream, db)
 
 
 def stream_message_results(chat_id: UUID, results_stream, db: Session):
