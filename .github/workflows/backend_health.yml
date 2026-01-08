@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,7 +19,7 @@ jobs:
         working-directory: backend
 
     steps:
-      - name: Checkout master
+      - name: Checkout
         uses: actions/checkout@v6
 
       - name: Install uv
@@ -45,7 +45,7 @@ jobs:
         working-directory: backend
 
     steps:
-      - name: Checkout master
+      - name: Checkout
         uses: actions/checkout@v6
 
       - name: Install uv
