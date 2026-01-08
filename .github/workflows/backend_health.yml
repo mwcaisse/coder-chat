@@ -60,5 +60,5 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --all-extras --dev
 
-      - name: Format check
+      - name: Lint
         run: uv run ruff check

@@ -6,7 +6,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from src.data_models.base import (
     CoderChatBaseModel,
-    generate_uuid,
     generate_current_date,
 )
 
