@@ -1,68 +1,113 @@
-import uuid
-from dataclasses import dataclass
 from typing import Generator
 
 from threading import Thread
 from uuid import UUID
 
+from sqlalchemy import select, and_
+from sqlalchemy.orm import Session
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 
 from src.config import CONFIG
+from src.data_models.chat import Chat, ChatMessage
+from src.exceptions import EntityNotFoundError
+from src.models.chat import (
+    ChatResponseModel,
+    CreateChatRequestModel,
+    ChatMessageResponseModel,
+)
+from src.services.user import JwtUser
 
 
-@dataclass
-class ChatMessage:
-    from_user: bool
-    content: str
-    summary: str | None = None
+def _chat_message_to_response_model(
+    chat_message: ChatMessage,
+) -> ChatMessageResponseModel:
+    return ChatMessageResponseModel(
+        content=chat_message.content,
+        summary=chat_message.summary,
+        from_user=chat_message.from_user,
+    )
 
 
-@dataclass
-class Chat:
-    id: UUID
-    messages: list[ChatMessage]
+def _chat_to_response_model(chat: Chat, messages: list[ChatMessage]):
+    return ChatResponseModel(
+        id=chat.id,
+        name=chat.name,
+        language=chat.language,
+        messages=[_chat_message_to_response_model(message) for message in messages],
+    )
 
 
-CHATS: dict[UUID, Chat] = dict()
+def _query_raw_chat(
+    chat_id: UUID, user: JwtUser, db: Session
+) -> tuple[Chat | None, list[ChatMessage]]:
+    chat_query = (
+        select(Chat)
+        .select_from(Chat)
+        .where(and_(Chat.user_id == user.id, Chat.id == chat_id))
+    )
+    chat = db.scalars(chat_query).first()
+    if chat is None:
+        return None, []
+
+    messages_query = (
+        select(ChatMessage)
+        .select_from(ChatMessage)
+        .where(ChatMessage.chat_id == chat_id)
+        .order_by(ChatMessage.create_date)
+    )
+    chat_messages = db.scalars(messages_query).all()
+
+    return chat, chat_messages
 
 
-def get_chat(chat_id: UUID) -> Chat | None:
-    return CHATS.get(chat_id)
+def get_chat(chat_id: UUID, user: JwtUser, db: Session) -> ChatResponseModel | None:
+    chat, chat_messages = _query_raw_chat(chat_id, user, db)
+
+    if chat is None:
+        return None
+
+    return _chat_to_response_model(chat, chat_messages)
 
 
-def create_chat() -> Chat:
-    chat_id = uuid.uuid4()
-    chat = Chat(id=chat_id, messages=[])
+def create_chat(
+    create_model: CreateChatRequestModel, user: JwtUser, db: Session
+) -> ChatResponseModel:
+    chat = Chat(name=create_model.name, language=create_model.language, user_id=user.id)
+    db.add(chat)
+    db.commit()
 
-    CHATS[chat_id] = chat
-
-    return chat
+    return _chat_to_response_model(chat, [])
 
 
-def stream_message_results(chat_id: UUID, results_stream):
+def stream_message_results(chat_id: UUID, results_stream, db: Session):
     message = ""
 
     for text_token in results_stream:
         message += text_token
         yield text_token
 
-    chat_message = ChatMessage(from_user=False, content=message)
-    CHATS[chat_id].messages.append(chat_message)
-    summarize_chat_message(chat_message)
+    chat_message = ChatMessage(chat_id=chat_id, content=message, from_user=False)
+    db.add(chat_message)
+    db.commit()
+
+    # TODO: re-add in the summary, we aren't using them right now anyway though
+    # summarize_chat_message(chat_message)
 
 
-def send_message_to_chat(chat_id: UUID, message: str):
-    if chat_id not in CHATS:
-        raise ValueError(f"No chat with id {chat_id} exists")
+def send_message_to_chat(chat_id: UUID, message: str, user: JwtUser, db: Session):
+    chat, chat_messages = _query_raw_chat(chat_id, user, db)
+    if chat is None:
+        raise EntityNotFoundError(f"No chat with id {chat_id} exists")
 
-    chat = CHATS[chat_id]
+    # the chat exists, we must add our message to the chat now
+    message_model = ChatMessage(chat_id=chat_id, content=message, from_user=True)
+    db.add(message_model)
+    db.commit()
 
-    chat.messages.append(ChatMessage(from_user=True, content=message))
-
-    previous_messages = [cm.content for cm in chat.messages[:-1]]
+    previous_messages = [m.content for m in chat_messages]
     results_stream = process_message(message, previous_messages)
 
-    return stream_message_results(chat_id, results_stream)
+    return stream_message_results(chat_id, results_stream, db)
 
 
 def process_message(
@@ -82,10 +127,10 @@ def process_message(
         PREVIOUS MESSAGES (SEPARATED BY ______)
         """.strip()
 
-        previous_messages_prompt += "______".join(previous_messages) + "______"
+        previous_messages_prompt += "______\n".join(previous_messages) + "______"
         prompt += previous_messages_prompt
 
-    prompt += "QUESTION:" + message
+    prompt += "\nQUESTION:" + message
 
     messages = [{"role": "user", "content": prompt}]
 
@@ -110,12 +155,13 @@ def process_message(
     return streamer
 
 
-def summarize_chat_message(message: ChatMessage):
-    def thread_fun():
-        message.summary = summarize_message(message.content)
-
-    thread = Thread(target=thread_fun, kwargs={})
-    thread.start()
+# TODO: Re-add generating summaries for messages + actually using them
+# def summarize_chat_message(message: ChatMessage):
+#     def thread_fun():
+#         message.summary = summarize_message(message.content)
+#
+#     thread = Thread(target=thread_fun, kwargs={})
+#     thread.start()
 
 
 def summarize_message(message: str) -> str:

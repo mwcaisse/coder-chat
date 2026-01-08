@@ -12,3 +12,7 @@ class InvalidTokenError(Exception):
 
 class UserLockedError(Exception):
     pass
+
+
+class EntityNotFoundError(Exception):
+    pass

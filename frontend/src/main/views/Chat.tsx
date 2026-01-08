@@ -137,6 +137,10 @@ export default function Chat() {
         const getChatId = async () => {
             const data: { id: string } = await ky
                 .post("/api/chat/", {
+                    json: {
+                        name: "My Amazing Chat",
+                        language: "python",
+                    },
                     headers: {
                         Accept: "application/json",
                         Authorization: `Bearer ${authToken}`,

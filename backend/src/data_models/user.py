@@ -14,7 +14,6 @@ from src.data_models.base import (
 class User(CoderChatBaseModel):
     __tablename__ = "user"
 
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=generate_uuid)
     username: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     email: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     password: Mapped[str] = mapped_column(String(1024), nullable=False)
@@ -35,7 +34,6 @@ class UserRefreshToken(CoderChatBaseModel):
         ),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=generate_uuid)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"), nullable=False)
     token_prefix: Mapped[str] = mapped_column(String(16), nullable=False)
     token_hash = mapped_column(String(1024), nullable=False)

@@ -7,12 +7,19 @@ class ChatRequestModel(BaseModel):
     message: str
 
 
-class ChatMessage(BaseModel):
+class ChatMessageResponseModel(BaseModel):
     from_user: bool
     content: str
     summary: str | None = None
 
 
+class CreateChatRequestModel(BaseModel):
+    name: str
+    language: str | None
+
+
 class ChatResponseModel(BaseModel):
     id: uuid.UUID
-    messages: list[ChatMessage]
+    name: str
+    language: str | None
+    messages: list[ChatMessageResponseModel]
