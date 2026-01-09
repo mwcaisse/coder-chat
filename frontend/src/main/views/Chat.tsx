@@ -8,7 +8,7 @@ import {
     CircularProgress,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
-import { FormEvent, useLayoutEffect, useRef, useState } from "react";
+import { FormEvent, memo, useLayoutEffect, useRef, useState } from "react";
 import remarkGfm from "remark-gfm";
 import rehypeStarryNight from "rehype-starry-night";
 import { MarkdownHooks } from "react-markdown";
@@ -137,7 +137,7 @@ async function sendMessageApi(
     return resp.body!.pipeThrough(new TextDecoderStream());
 }
 
-function ChatMessage({ content }: ChatMessageProps) {
+const ChatMessage = memo(function ChatMessage({ content }: ChatMessageProps) {
     return (
         <Paper
             sx={{
@@ -153,7 +153,7 @@ function ChatMessage({ content }: ChatMessageProps) {
             </MarkdownHooks>
         </Paper>
     );
-}
+});
 
 function ChatMessageLoading() {
     return (
