@@ -15,6 +15,7 @@ from src.models.chat import (
     CreateChatRequestModel,
     ChatMessageResponseModel,
     CreateChatWithMessageRequestModel,
+    SimpleChatResponseModel,
 )
 from src.services.user import JwtUser
 
@@ -68,6 +69,29 @@ def get_chat(chat_id: UUID, user: JwtUser, db: Session) -> ChatResponseModel | N
         return None
 
     return _chat_to_response_model(chat, chat_messages)
+
+
+def get_chats_for_user(
+    user: JwtUser, db: Session, limit=25
+) -> list[SimpleChatResponseModel]:
+    chats_query = (
+        select(Chat)
+        .select_from(Chat)
+        .where(Chat.user_id == user.id)
+        .order_by(Chat.create_date.desc())
+        .limit(limit)
+    )
+    chats = db.scalars(chats_query).all()
+
+    return [
+        SimpleChatResponseModel(
+            id=chat.id,
+            name=chat.name,
+            language=chat.language,
+            create_date=chat.create_date,
+        )
+        for chat in chats
+    ]
 
 
 def create_chat(

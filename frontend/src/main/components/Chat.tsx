@@ -1,6 +1,5 @@
 import {
     IconButton,
-    Container,
     Stack,
     TextField,
     Paper,
@@ -288,7 +287,7 @@ export default function Chat() {
     };
 
     return (
-        <Container sx={{ pt: 2 }}>
+        <Box>
             {messages.length === 0 && (
                 <EmptyChatPrompt
                     currentMessage={currentMessage}
@@ -385,6 +384,6 @@ export default function Chat() {
                     </Box>
                 </Box>
             )}
-        </Container>
+        </Box>
     );
 }

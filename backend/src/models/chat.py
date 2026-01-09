@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel
 
@@ -29,3 +30,10 @@ class ChatResponseModel(BaseModel):
     name: str
     language: str | None
     messages: list[ChatMessageResponseModel]
+
+
+class SimpleChatResponseModel(BaseModel):
+    id: uuid.UUID
+    name: str
+    language: str | None
+    create_date: datetime

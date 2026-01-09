@@ -3,8 +3,8 @@ import Login from "@app/views/Login.tsx";
 import { ToastContextProvider } from "@app/contexts/ToastContext.tsx";
 import { SnackbarProvider } from "notistack";
 import { createBrowserRouter, RouterProvider } from "react-router";
-import Chat from "@app/views/Chat.tsx";
 import { ProtectedRoute, UnauthedRoute } from "@app/ProtectedRoute.tsx";
+import ChatPage from "@app/views/ChatPage.tsx";
 
 const theme = createTheme({
     palette: {
@@ -25,7 +25,7 @@ const router = createBrowserRouter([
         path: "/",
         element: (
             <ProtectedRoute>
-                <Chat />
+                <ChatPage />
             </ProtectedRoute>
         ),
     },

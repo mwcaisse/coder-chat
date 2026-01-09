@@ -15,6 +15,7 @@ from src.services.chat import (
     create_chat,
     get_chat,
     create_chat_with_message,
+    get_chats_for_user,
 )
 from src.util.auth import verify_auth_token
 
@@ -30,6 +31,11 @@ def fetch_chat_r(
         raise HTTPException(status_code=404, detail="No chat with given ID found")
 
     return chat
+
+
+@router.get("/chat/")
+def fetch_all_chats_r(db: DatabaseSessionDepend, user=Depends(verify_auth_token)):
+    return get_chats_for_user(user, db)
 
 
 @router.post("/chat/")
