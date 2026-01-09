@@ -1,25 +1,17 @@
-import {
-    IconButton,
-    Stack,
-    TextField,
-    Paper,
-    Box,
-    CircularProgress,
-} from "@mui/material";
+import { IconButton, Stack, TextField, Box } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
-import { FormEvent, memo, useLayoutEffect, useRef, useState } from "react";
-import remarkGfm from "remark-gfm";
-import rehypeStarryNight from "rehype-starry-night";
-import { MarkdownHooks } from "react-markdown";
+import { FormEvent, useLayoutEffect, useRef, useState } from "react";
+
 import { useAuthStore } from "@app/stores/AuthenticationStore.ts";
+import EmptyChatPrompt from "@app/components/EmptyChatPrompt.tsx";
+import {
+    ChatMessage,
+    ChatMessageLoading,
+} from "@app/components/ChatMessage.tsx";
 
 type Message = {
     content: string;
     user: boolean;
-};
-
-type ChatMessageProps = {
-    content: string;
 };
 
 type Chat = {
@@ -134,81 +126,6 @@ async function sendMessageApi(
 
     // the whole body will be the response message, so return that directly
     return resp.body!.pipeThrough(new TextDecoderStream());
-}
-
-const ChatMessage = memo(function ChatMessage({ content }: ChatMessageProps) {
-    return (
-        <Paper
-            sx={{
-                px: 2,
-                borderRadius: 5,
-            }}
-        >
-            <MarkdownHooks
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeStarryNight]}
-            >
-                {content}
-            </MarkdownHooks>
-        </Paper>
-    );
-});
-
-function ChatMessageLoading() {
-    return (
-        <Paper
-            sx={{
-                p: 2,
-                borderRadius: 5,
-            }}
-        >
-            <CircularProgress />
-        </Paper>
-    );
-}
-
-type EmptyChatPromptProps = {
-    onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-    currentMessage: string;
-    setCurrentMessage: (message: string) => void;
-};
-
-function EmptyChatPrompt({
-    onSubmit,
-    currentMessage,
-    setCurrentMessage,
-}: EmptyChatPromptProps) {
-    return (
-        <Box
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            sx={{ height: "100vh" }}
-        >
-            <form onSubmit={onSubmit}>
-                <Stack direction="row" spacing={1}>
-                    <TextField
-                        variant="outlined"
-                        fullWidth
-                        sx={{
-                            minWidth: "60vw",
-                        }}
-                        slotProps={{
-                            input: {
-                                sx: { borderRadius: 5 },
-                            },
-                        }}
-                        placeholder="Ask coder chat"
-                        value={currentMessage}
-                        onChange={(e) => setCurrentMessage(e.target.value)}
-                    />
-                    <IconButton size="large" type="submit">
-                        <SendIcon />
-                    </IconButton>
-                </Stack>
-            </form>
-        </Box>
-    );
 }
 
 export default function Chat() {
