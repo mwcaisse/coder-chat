@@ -8,12 +8,11 @@ import {
     CircularProgress,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
-import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { FormEvent, useLayoutEffect, useRef, useState } from "react";
 import remarkGfm from "remark-gfm";
 import rehypeStarryNight from "rehype-starry-night";
 import { MarkdownHooks } from "react-markdown";
 import { useAuthStore } from "@app/stores/AuthenticationStore.ts";
-import ky from "ky";
 
 type Message = {
     content: string;
@@ -23,6 +22,120 @@ type Message = {
 type ChatMessageProps = {
     content: string;
 };
+
+type Chat = {
+    id: string;
+    name: string;
+    language?: string;
+};
+
+type CreateChatResponse = {
+    chat: Chat;
+    messageStream: AsyncGenerator<string, void, void>;
+};
+
+/**
+ *
+ * @param stream_reader
+ * @param current_chunk Any left over parts of the last chunk of the stream read, this will be immediately yielded
+ */
+async function* messageStreamGenerator(
+    stream_reader: ReadableStreamDefaultReader,
+    current_chunk: string | null,
+) {
+    if (current_chunk !== null) {
+        yield current_chunk;
+    }
+    try {
+        while (true) {
+            const { done, value } = await stream_reader.read();
+            if (done) {
+                return;
+            }
+            yield value;
+        }
+    } finally {
+        stream_reader.releaseLock();
+    }
+}
+
+async function createChatAndSendMessage(
+    message: string,
+    authToken: string,
+): Promise<CreateChatResponse> {
+    const resp = await fetch(`/api/chat/message`, {
+        method: "POST",
+        body: JSON.stringify({ message: message }),
+        headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${authToken}`,
+        },
+    });
+
+    // check if we received a non-successful response and throw an error in that case
+    if (!resp.ok) {
+        // TODO: Better error here, but this work for now
+        throw new Error("Failed to send message");
+    }
+
+    const bodyStreamReader = resp
+        .body!.pipeThrough(new TextDecoderStream())
+        .getReader();
+
+    let buffer = "";
+    let remainder: string | null = null;
+    try {
+        while (true) {
+            const { done, value } = await bodyStreamReader.read();
+            if (done) {
+                throw new Error(
+                    "Could not parse create chat and message response. Did not find chat JSON",
+                );
+            }
+            if (value.indexOf("\n") !== -1) {
+                buffer += value.slice(0, value.indexOf("\n"));
+                remainder = value.slice(value.indexOf("\n") + 1);
+                break;
+            } else {
+                buffer += value;
+            }
+        }
+    } catch (e) {
+        bodyStreamReader.releaseLock();
+        throw e;
+    }
+
+    return {
+        chat: JSON.parse(buffer) as Chat,
+        messageStream: messageStreamGenerator(bodyStreamReader, remainder),
+    };
+}
+
+async function sendMessageApi(
+    chatId: string,
+    message: string,
+    authToken: string,
+) {
+    const resp = await fetch(`/api/chat/${chatId}/message`, {
+        method: "POST",
+        body: JSON.stringify({ message: message }),
+        headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${authToken}`,
+        },
+    });
+
+    // check if we received a non-successful response and throw an error in that case
+    if (!resp.ok) {
+        // TODO: Better error here, but this work for now
+        throw new Error("Failed to send message");
+    }
+
+    // the whole body will be the response message, so return that directly
+    return resp.body!.pipeThrough(new TextDecoderStream());
+}
 
 function ChatMessage({ content }: ChatMessageProps) {
     return (
@@ -128,32 +241,6 @@ export default function Chat() {
         return () => window.removeEventListener("resize", updateHeight);
     }, []);
 
-    useEffect(() => {
-        if (authToken === null || chatId !== null) {
-            return;
-        }
-
-        // otherwise we shall fetch a (rug) chat id
-        const getChatId = async () => {
-            const data: { id: string } = await ky
-                .post("/api/chat/", {
-                    json: {
-                        name: "My Amazing Chat",
-                        language: "python",
-                    },
-                    headers: {
-                        Accept: "application/json",
-                        Authorization: `Bearer ${authToken}`,
-                    },
-                })
-                .json();
-
-            setChatId(data.id);
-            console.log("Created a chat with id: ", data.id);
-        };
-        getChatId();
-    }, [authToken, chatId]);
-
     const onSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (currentMessage.length === 0) return;
@@ -167,20 +254,26 @@ export default function Chat() {
 
     const sendMessage = async (message: string) => {
         setLoadingMessageResponse(true);
-        const resp = await fetch(`/api/chat/${chatId}/message`, {
-            method: "POST",
-            body: JSON.stringify({ message: message }),
-            headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                Authorization: `Bearer ${authToken}`,
-            },
-        });
+
+        // depending on whether we have a chat id already, we will call a different endpoint, either:
+        //  - create a chat + send a message
+        //  - send a message to an existing chat
 
         let responseMessage = "";
-        const stringReader = resp.body!.pipeThrough(new TextDecoderStream());
-        // @ts-expect-error the typing of this is weird
-        for await (const chunk of stringReader) {
+        let messageStream;
+        if (chatId === null) {
+            const { chat, messageStream: ms } = await createChatAndSendMessage(
+                message,
+                authToken!,
+            );
+            setChatId(chat.id);
+            messageStream = ms;
+        } else {
+            messageStream = await sendMessageApi(chatId, message, authToken!);
+        }
+
+        // @ts-expect-error ReadableStream is an iterator, despite what the typing says
+        for await (const chunk of messageStream) {
             setInProcessMessageResponse((prev) => [...prev, chunk]);
             responseMessage += chunk;
         }
