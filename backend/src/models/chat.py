@@ -30,6 +30,7 @@ class ChatResponseModel(BaseModel):
     name: str
     language: str | None
     messages: list[ChatMessageResponseModel]
+    # TODO: Add create_date to this
 
 
 class SimpleChatResponseModel(BaseModel):
