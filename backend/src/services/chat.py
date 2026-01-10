@@ -36,6 +36,7 @@ def _chat_to_response_model(chat: Chat, messages: list[ChatMessage]):
         name=chat.name,
         language=chat.language,
         messages=[_chat_message_to_response_model(message) for message in messages],
+        create_date=chat.create_date,
     )
 
 

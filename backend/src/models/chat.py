@@ -25,16 +25,12 @@ class CreateChatWithMessageRequestModel(BaseModel):
     language: str | None = None
 
 
-class ChatResponseModel(BaseModel):
-    id: uuid.UUID
-    name: str
-    language: str | None
-    messages: list[ChatMessageResponseModel]
-    # TODO: Add create_date to this
-
-
 class SimpleChatResponseModel(BaseModel):
     id: uuid.UUID
     name: str
     language: str | None
     create_date: datetime
+
+
+class ChatResponseModel(SimpleChatResponseModel):
+    messages: list[ChatMessageResponseModel]
