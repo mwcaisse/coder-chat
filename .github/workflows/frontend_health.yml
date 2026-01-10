@@ -22,12 +22,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: setup node
+      - name: Setup node
         uses: actions/setup-node@v6
         with:
           node-version: 25
           cache: "yarn"
           cache-dependency-path: frontend/yarn.lock
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
 
       - name: Format Check
         run: yarn format:check
@@ -43,12 +46,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: setup node
+      - name: Setup node
         uses: actions/setup-node@v6
         with:
           node-version: 25
           cache: "yarn"
           cache-dependency-path: frontend/yarn.lock
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
 
       - name: Lint
         run: yarn lint
