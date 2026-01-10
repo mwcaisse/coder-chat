@@ -27,3 +27,25 @@ jobs:
           tags: |
             registry.gitlab.com/mwcaisse/application-images/coder-chat:latest
             registry.gitlab.com/mwcaisse/application-images/coder-chat:${{ github.sha }}
+
+    # TODO: Combine this with the job above? (at some point)
+    build_publish_github:
+      name: "Build and Publish image (Github)"
+      runs-on: ubuntu-latest
+      permissions:
+        contents: read
+        packages: write
+        id-token: write
+      steps:
+        - name: Checkout master
+          uses: actions/checkout@v6
+
+        - name: Build and Publish
+          uses: mwcaisse/gha-common/actions/build_and_push_image@master
+          with:
+            registry: ghcr.io
+            username: ${{ github.actor }}
+            password: ${{ secrets.GITHUB_TOKEN }}
+            tags: |
+              ghcr.io/${{ github.repository }}:latest
+              ghcr.io/${{ github.repository }}:${{ github.sha }}
