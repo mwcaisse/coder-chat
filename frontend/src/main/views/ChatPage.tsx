@@ -9,7 +9,7 @@ export default function ChatPage() {
         <ChatContextProvider>
             <Stack direction="row">
                 <ChatLeftMenu />
-                <Box flexGrow={1} sx={{ ml: 2 }}>
+                <Box flexGrow={1} sx={{ ml: 2, py: 2, px: 3 }}>
                     <Chat />
                 </Box>
             </Stack>

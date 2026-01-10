@@ -124,7 +124,7 @@ def create_chat_with_message(
     yield chat_response.model_dump_json()
     yield "\n"
 
-    results_stream = process_message(create_model.message, [])
+    results_stream = process_message(create_model.message, [], create_model.language)
     yield from stream_message_results(chat.id, results_stream, db)
 
 
@@ -154,22 +154,22 @@ def send_message_to_chat(chat_id: UUID, message: str, user: JwtUser, db: Session
     db.commit()
 
     previous_messages = [m.content for m in chat_messages]
-    results_stream = process_message(message, previous_messages)
+    results_stream = process_message(message, previous_messages, chat.language)
 
     return stream_message_results(chat_id, results_stream, db)
 
 
 def process_message(
-    message: str, previous_messages: list[str]
+    message: str, previous_messages: list[str], language: str | None
 ) -> Generator[str, None, None]:
     tokenizer = AutoTokenizer.from_pretrained(CONFIG.model_path, local_files_only=True)
     model = AutoModelForCausalLM.from_pretrained(
         CONFIG.model_path, dtype="auto", device_map="auto"
     )
 
-    prompt = """
-    LANGUAGE: python      
-    """.strip()
+    prompt = ""
+    if language is not None:
+        prompt = f"LANGUAGE: {language}\n"
 
     if previous_messages is not None and len(previous_messages) > 0:
         previous_messages_prompt = """

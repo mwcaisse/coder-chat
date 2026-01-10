@@ -34,11 +34,12 @@ async function* messageStreamGenerator(
 
 async function createChatAndSendMessage(
     message: string,
+    language: string | null,
     authToken: string,
 ): Promise<CreateChatResponse> {
     const resp = await fetch(`/api/chat/message`, {
         method: "POST",
-        body: JSON.stringify({ message: message }),
+        body: JSON.stringify({ message: message, language: language }),
         headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
@@ -116,6 +117,10 @@ type ChatContextObject = {
     loadingMessageResponse: boolean;
     inProcessMessageResponse: string[];
     sendMessage: (message: string) => Promise<void>;
+    createChatWithMessage: (
+        message: string,
+        language: string | null,
+    ) => Promise<void>;
     newChat: () => void;
 };
 
@@ -132,26 +137,43 @@ export const ChatContextProvider = ({ children }: React.PropsWithChildren) => {
         string[]
     >([]);
 
-    // Posts a new user message to the chat
+    const createChatWithMessage = async (
+        message: string,
+        language: string | null,
+    ) => {
+        setMessages((prev) => [...prev, { content: message, from_user: true }]);
+        setLoadingMessageResponse(true);
+
+        const { chat, messageStream } = await createChatAndSendMessage(
+            message,
+            language,
+            authToken!,
+        );
+        setChatId(chat.id);
+        await _processMessageResponse(messageStream);
+    };
+
     const sendMessage = async (message: string) => {
         setMessages((prev) => [...prev, { content: message, from_user: true }]);
         setLoadingMessageResponse(true);
 
-        let responseMessage = "";
-        let messageStream;
-        if (chatId === null) {
-            const { chat, messageStream: ms } = await createChatAndSendMessage(
-                message,
-                authToken!,
-            );
-            setChatId(chat.id);
-            messageStream = ms;
-        } else {
-            messageStream = await sendMessageApi(chatId, message, authToken!);
-        }
+        const messageStream = await sendMessageApi(
+            chatId!,
+            message,
+            authToken!,
+        );
+        await _processMessageResponse(messageStream);
+    };
 
+    // Posts a new user message to the chat
+    const _processMessageResponse = async (
+        responseStream:
+            | AsyncGenerator<string, void, void>
+            | ReadableStream<string>,
+    ) => {
+        let responseMessage = "";
         // @ts-expect-error ReadableStream is an iterator, despite what the typing says
-        for await (const chunk of messageStream) {
+        for await (const chunk of responseStream) {
             setInProcessMessageResponse((prev) => [...prev, chunk]);
             responseMessage += chunk;
         }
@@ -178,6 +200,7 @@ export const ChatContextProvider = ({ children }: React.PropsWithChildren) => {
         loadingMessageResponse,
         inProcessMessageResponse,
         sendMessage,
+        createChatWithMessage,
         newChat,
     };
 

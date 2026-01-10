@@ -45,13 +45,7 @@ export default function Chat() {
 
     return (
         <Box>
-            {messages.length === 0 && (
-                <EmptyChatPrompt
-                    currentMessage={currentMessage}
-                    setCurrentMessage={setCurrentMessage}
-                    onSubmit={onSubmit}
-                />
-            )}
+            {messages.length === 0 && <EmptyChatPrompt />}
             {messages.length !== 0 && (
                 <Box flexGrow={1}>
                     <Stack
