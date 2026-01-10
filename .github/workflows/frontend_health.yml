@@ -27,6 +27,7 @@ jobs:
         with:
           node-version: 25
           cache: "yarn"
+          cache-dependency-path: frontend/yarn.lock
 
       - name: Format Check
         run: yarn format:check
@@ -47,6 +48,7 @@ jobs:
         with:
           node-version: 25
           cache: "yarn"
+          cache-dependency-path: frontend/yarn.lock
 
       - name: Lint
         run: yarn lint
