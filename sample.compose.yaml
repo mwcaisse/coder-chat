@@ -1,0 +1,42 @@
+services:
+  coder-chat:
+    image: ghcr.io/mwcaisse/coder-chat:latest
+    environment:
+      CC_DB_HOST: db
+      CC_DB_PORT: 5432
+      CC_DB_USER: cc_user
+      CC_DB_PASSWORD: cc_password
+      CC_DB_DATABASE: coder_chat
+      # Can generate with "secrets.token_urlsafe(128)"
+      CC_JWT_SIGN_SECRET: "sign-secret-here"
+
+      CC_MODEL_PATH: /opt/llm_models/qwen3-1.7B
+    volumes:
+      - ./data/models:/opt/llm_models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities:
+                - gpu
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "9980:80"
+
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: cc_user
+      POSTGRES_PASSWORD: cc_password
+      POSTGRES_DB: coder_chat
+    volumes:
+      - ./data/db:/var/lib/postgresql/
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -h localhost -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 2s
+      start_period: 30s
