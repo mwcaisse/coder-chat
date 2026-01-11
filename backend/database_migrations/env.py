@@ -35,9 +35,6 @@ target_metadata = CoderChatBaseModel.metadata
 load_dotenv(".env")
 
 
-# print(os.environ)
-
-
 class AlembicSettings(BaseSettings):
     """
     Stripped down version of pydantic BaseSettings to support loading in the database configuration from ENV vars
@@ -52,6 +49,10 @@ ALEMBIC_CONFIG = AlembicSettings()
 
 
 def get_database_url():
+    sqlalchemy_url_option = config.get_main_option("sqlalchemy.url", None)
+    if sqlalchemy_url_option is not None:
+        return sqlalchemy_url_option
+
     return create_database_connection_url(ALEMBIC_CONFIG.db)
 
 
