@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from src.config import CONFIG
 from src.database import run_database_migrations
-from src.logs import configure_logging, get_logger
+from src.logs import configure_logging
 from src.router.chat import router as chat_router
 from src.router.user import router as user_router
 from src.util.static_files import ReactStaticFiles
