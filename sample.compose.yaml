@@ -1,6 +1,7 @@
 services:
   coder-chat:
     image: ghcr.io/mwcaisse/coder-chat:latest
+    pull_policy: always
     environment:
       CC_DB_HOST: db
       CC_DB_PORT: 5432
