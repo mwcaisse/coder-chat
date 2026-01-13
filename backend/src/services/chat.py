@@ -10,6 +10,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStream
 from src.config import CONFIG
 from src.data_models.chat import Chat, ChatMessage
 from src.exceptions import EntityNotFoundError
+from src.logs import get_logger
 from src.models.chat import (
     ChatResponseModel,
     CreateChatRequestModel,
@@ -18,6 +19,9 @@ from src.models.chat import (
     SimpleChatResponseModel,
 )
 from src.services.user import JwtUser
+
+
+logger = get_logger()
 
 
 def _chat_message_to_response_model(
@@ -167,6 +171,8 @@ def process_message(
         CONFIG.model_path, dtype="auto", device_map="auto"
     )
 
+    logger.info(f"Calling model {CONFIG.model_path} on device: {model.device}")
+
     prompt = ""
     if language is not None:
         prompt = f"LANGUAGE: {language}\n"
@@ -193,12 +199,14 @@ def process_message(
 
     model_inputs = tokenizer([text], return_tensors="pt").to(model.device)
 
-    generation_args = {"max_new_tokens": 32768, "streamer": streamer, **model_inputs}
+    def generate_fun():
+        try:
+            model.generate(max_new_tokens=32768, streamer=streamer, **model_inputs)
+        except:
+            logger.error("Exception occurred while calling LLM")
+            raise
 
-    thread = Thread(
-        target=model.generate,
-        kwargs=generation_args,
-    )
+    thread = Thread(target=generate_fun)
     thread.start()
 
     return streamer
