@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from src.ai_models import initialize_model
 from src.config import CONFIG
 from src.database import run_database_migrations
 from src.logs import configure_logging
@@ -15,13 +16,14 @@ configure_logging()
 
 
 @asynccontextmanager
-async def database_migrations_lifespan(_: FastAPI):
+async def init_lifespan(_: FastAPI):
     run_database_migrations()
+    initialize_model()
     yield
 
 
 def app_factory() -> FastAPI:
-    _app = FastAPI(lifespan=database_migrations_lifespan)
+    _app = FastAPI(lifespan=init_lifespan)
 
     # Add our APIs
 

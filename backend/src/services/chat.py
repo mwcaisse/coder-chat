@@ -7,6 +7,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import Session
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 
+from src.ai_models import AI_MODELS
 from src.config import CONFIG
 from src.data_models.chat import Chat, ChatMessage
 from src.exceptions import EntityNotFoundError
@@ -166,12 +167,12 @@ def send_message_to_chat(chat_id: UUID, message: str, user: JwtUser, db: Session
 def process_message(
     message: str, previous_messages: list[str], language: str | None
 ) -> Generator[str, None, None]:
-    tokenizer = AutoTokenizer.from_pretrained(CONFIG.model_path, local_files_only=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        CONFIG.model_path, dtype="auto", device_map="auto"
-    )
+    if CONFIG.model_path not in AI_MODELS:
+        raise ValueError("Models must be loaded before processing messages")
 
-    logger.info(f"Calling model {CONFIG.model_path} on device: {model.device}")
+    ml_model = AI_MODELS[CONFIG.model_path]
+    tokenizer = ml_model.tokenizer
+    model = ml_model.model
 
     prompt = ""
     if language is not None:
