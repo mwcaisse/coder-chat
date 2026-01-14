@@ -39,3 +39,5 @@ class ApplicationSettings(BaseSettings):
     db: DatabaseSettings
 
     jwt_sign_secret: str = generate_random_jwt_secret()
+
+    json_logs: bool = False

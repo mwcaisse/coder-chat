@@ -21,7 +21,7 @@ from src.models.chat import (
 from src.services.user import JwtUser
 
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 def _chat_message_to_response_model(

@@ -11,7 +11,7 @@ from src.config import CONFIG
 from src.logs import get_logger
 from src.util.database_utils import create_database_connection_url
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 def get_database_session():
